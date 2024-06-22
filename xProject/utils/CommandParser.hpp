@@ -18,12 +18,17 @@ namespace Utils
 			ParsingCommandLine();
 		}
 
+		bool ArgumentsEmpty() const
+		{
+			return arguments.empty();
+		}
+
 	private:
 		void ParsingCommandLine()
 		{
 			std::istringstream iss(fullCommand);
 			iss >> titleCommand;
-
+																					
 			std::string arg;
 			while (iss >> arg)
 			{
@@ -37,18 +42,38 @@ namespace Utils
 	{
 	private:
 		std::function<void(const Command&)> task;
+		std::atomic_bool requiredArgs = false;
+
 	public:
 		template<typename Func, typename... Args>
 		CommandTask(Func&& _func, Args&&... _args) 
-			: task([func = std::forward<Func>(_func),
+			: task([this,
+					func = std::forward<Func>(_func),
 					args = std::tuple(std::forward<Args>(_args)...)](const Command& _command)
 					{
+						if (IsRequiredArgs() && _command.ArgumentsEmpty())
+						{
+							spdlog::error("this command requires arguments");
+							return;
+						}
+
 						std::apply(func, std::tuple_cat(std::make_tuple(_command), args));
 					})
 		{}
 
 		void Execute(const Command& _command) const { task(_command); }
 	
+		[[maybe_unused]] CommandTask* RequiredArgs()
+		{
+			requiredArgs.exchange(true);
+			return this;
+		}
+
+		bool IsRequiredArgs() const
+		{
+			return requiredArgs.load(std::memory_order_acquire);
+		}
+
 		CommandTask(CommandTask&&) = default;
 		CommandTask& operator=(CommandTask&&) = default;
 		CommandTask(const CommandTask&) = delete;
@@ -84,9 +109,10 @@ namespace Utils
 		}
 
 		template<typename Func, typename... Args>
-		void RegisterCommand(const std::string& _command, Func&& _func, Args&&... _args)
+		[[maybe_unused]] std::unique_ptr<CommandTask>& RegisterCommand(const std::string& _command, Func&& _func, Args&&... _args)
 		{
 			callbackCommand[_command] = MakeCommandTask(std::forward<Func>(_func), std::forward<Args>(_args)...);
+			return callbackCommand[_command];
 		}
 
 		void ExecuteParse()
