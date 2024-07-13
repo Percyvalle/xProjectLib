@@ -50,9 +50,6 @@
     <ClInclude Include="network\ServerInterface.hpp">
       <Filter>Файлы заголовков\network</Filter>
     </ClInclude>
-    <ClInclude Include="network\StructMessage.hpp">
-      <Filter>Файлы заголовков\network</Filter>
-    </ClInclude>
     <ClInclude Include="filesystem\FilesystemManager.hpp">
       <Filter>Файлы заголовков\filesystem</Filter>
     </ClInclude>
@@ -65,9 +62,6 @@
     <ClInclude Include="utils\Utils.hpp">
       <Filter>Файлы заголовков\utils</Filter>
     </ClInclude>
-    <ClInclude Include="FileSystem.hpp">
-      <Filter>Файлы заголовков\filesystem</Filter>
-    </ClInclude>
     <ClInclude Include="network\Handler.hpp">
       <Filter>Файлы заголовков\network</Filter>
     </ClInclude>
@@ -76,6 +70,9 @@
     </ClInclude>
     <ClInclude Include="filesystem\PathStruct.hpp">
       <Filter>Файлы заголовков\filesystem</Filter>
+    </ClInclude>
+    <ClInclude Include="network\MessageInterface.hpp">
+      <Filter>Файлы заголовков\network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

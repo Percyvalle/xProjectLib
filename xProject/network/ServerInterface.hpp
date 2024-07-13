@@ -3,14 +3,15 @@
 #include "Connection.hpp"
 
 #include <spdlog/spdlog.h>
+#include <deque>
 
 namespace Net {
 
-	template<typename TypeMsg, typename TypeMsgStatus>
+	template<typename MessageIMPL>
 	class ServerInterface {
 	protected:
-		std::deque<std::shared_ptr<Net::Connection<TypeMsg, TypeMsgStatus>>> connections;
-		Utils::QueueLF<std::shared_ptr<Net::OwnerMessage<TypeMsg, TypeMsgStatus>>> msgQueueIn;
+		std::deque<std::shared_ptr<Net::Connection<MessageIMPL>>> connections;
+		Utils::QueueLF<std::shared_ptr<Net::OwnerMessage<MessageIMPL>>> msgQueueIn;
 
 		asio::io_service connectContext;
 		asio::ip::tcp::acceptor acceptor;
@@ -42,7 +43,7 @@ namespace Net {
 				{
 					if (!_error_code)
 					{
-						std::shared_ptr<Net::Connection<TypeMsg, TypeMsgStatus>> clientConnection = std::make_shared<Net::Connection<TypeMsg, TypeMsgStatus>>(Net::Connection<TypeMsg, TypeMsgStatus>::OwnerConnection::Server, connectContext, std::move(_socket), msgQueueIn);
+						std::shared_ptr<Net::Connection<MessageIMPL>> clientConnection = std::make_shared<Net::Connection<MessageIMPL>>(Net::Connection<MessageIMPL>::OwnerConnection::Server, connectContext, std::move(_socket), msgQueueIn);
 
 						OnConnect(clientConnection);
 
@@ -68,7 +69,7 @@ namespace Net {
 			while (!msgQueueIn.empty()) 
 			{
 
-				std::shared_ptr<Net::OwnerMessage<TypeMsg, TypeMsgStatus>> ownerMessage = msgQueueIn.pop_front();
+				std::shared_ptr<Net::OwnerMessage<MessageIMPL>> ownerMessage = msgQueueIn.pop_front();
 
 				OnMessage(ownerMessage);
 			}
@@ -112,11 +113,11 @@ namespace Net {
 		}
 
 	protected:
-		virtual void OnMessage(std::shared_ptr<Net::OwnerMessage<TypeMsg, TypeMsgStatus>> _ownMsg) = 0;
+		virtual void OnMessage(std::shared_ptr<Net::OwnerMessage<MessageIMPL>> _ownMsg) = 0;
 
-		virtual void OnConnect(std::shared_ptr<Net::Connection<TypeMsg, TypeMsgStatus>> _handleClient) = 0;
+		virtual void OnConnect(std::shared_ptr<Net::Connection<MessageIMPL>> _handleClient) = 0;
 
-		virtual void OnDisconnect(std::shared_ptr<Net::Connection<TypeMsg, TypeMsgStatus>> _handleClient) = 0;
+		virtual void OnDisconnect(std::shared_ptr<Net::Connection<MessageIMPL>> _handleClient) = 0;
 	};
 
 }

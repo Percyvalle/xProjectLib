@@ -8,7 +8,7 @@
 
 #include "collections/QeueuLockfree.hpp"
 
-#include "StructMessage.hpp"
+#include "network/MessageInterface.hpp"
 
 namespace Net {
 
@@ -18,26 +18,26 @@ namespace Net {
 	using ENDPOINT = asio::ip::tcp::endpoint;
 	using ERROR_CODE = boost::system::error_code;
 
-	template<typename TypeMsg, typename TypeMsgStatus>
-	class Connection : public std::enable_shared_from_this<Connection<TypeMsg, TypeMsgStatus>> {
+	template<typename MessageIMPL>
+	class Connection : public std::enable_shared_from_this<Connection<MessageIMPL>> {
 	public:
 		enum class OwnerConnection {
 			Server, Client
 		};
-	
+
 	private:
 		SOCKET connectSocket;
 		asio::io_service& connectContext;
+	
+		Utils::QueueLF<MessageIMPL> msgQueueOut;
+		Utils::QueueLF<std::shared_ptr<Net::OwnerMessage<MessageIMPL>>>& msgQueueIn;
 
-		Utils::QueueLF<Net::Message<TypeMsg, TypeMsgStatus>> msgQueueOut;
-		Utils::QueueLF<std::shared_ptr<Net::OwnerMessage<TypeMsg, TypeMsgStatus>>>& msgQueueIn;
-
-		Net::Message<TypeMsg, TypeMsgStatus> temporaryMessage;
+		MessageIMPL temporaryMessage;
 
 		OwnerConnection owner;
 	public:
-		Connection(OwnerConnection _owner, asio::io_service& _context, SOCKET _socket, Utils::QueueLF<std::shared_ptr<Net::OwnerMessage<TypeMsg, TypeMsgStatus>>>& _msgIn)
-			: connectContext(_context), connectSocket(std::move(_socket)), msgQueueIn(_msgIn) 
+		Connection(OwnerConnection _owner, asio::io_service& _context, SOCKET _socket, Utils::QueueLF<std::shared_ptr<Net::OwnerMessage<MessageIMPL>>>& _msgIn)
+			: connectContext(_context), connectSocket(std::move(_socket)), msgQueueIn(_msgIn)
 		{
 			owner = _owner;
 		}
@@ -80,7 +80,7 @@ namespace Net {
 			return connectSocket.is_open();
 		}
 
-		void Send(const Net::Message<TypeMsg, TypeMsgStatus>& _msg) {
+		void Send(const MessageIMPL& _msg) {
 			boost::asio::post(connectContext,
 				[this, _msg]()
 				{
@@ -94,12 +94,12 @@ namespace Net {
 		}
 	private:
 		void ReadHeader() {
-			asio::async_read(connectSocket, boost::asio::buffer(&temporaryMessage.header, sizeof(Net::HeaderMessage<TypeMsg, TypeMsgStatus>)),
+			asio::async_read(connectSocket, boost::asio::buffer(&temporaryMessage.Header(), temporaryMessage.headerSize),
 				[this](ERROR_CODE _error_code, std::size_t _length)
 				{
 					if (!_error_code) {
-						if (temporaryMessage.header.sizeData > 0) {
-							temporaryMessage.body.data.resize(temporaryMessage.header.sizeData);
+						if (temporaryMessage.HSize() > 0) {
+							temporaryMessage.Body().Data().resize(temporaryMessage.HSize());
 							ReadBody();
 						}
 						else {
@@ -113,7 +113,7 @@ namespace Net {
 			);
 		}
 		void ReadBody() {
-			asio::async_read(connectSocket, boost::asio::buffer(temporaryMessage.body.data.data(), temporaryMessage.header.sizeData),
+			asio::async_read(connectSocket, boost::asio::buffer(temporaryMessage.Body().Data(), temporaryMessage.HSize()),
 				[this](boost::system::error_code _error_code, std::size_t length)
 				{
 					if (!_error_code) {
@@ -127,11 +127,11 @@ namespace Net {
 		}
 
 		void WriteHeader() {
-			asio::async_write(connectSocket, boost::asio::buffer(&msgQueueOut.front().header, sizeof(Net::HeaderMessage<TypeMsg, TypeMsgStatus>)),
+			asio::async_write(connectSocket, boost::asio::buffer(&msgQueueOut.front().Header(), msgQueueOut.front().headerSize),
 				[this](boost::system::error_code _error_code, std::size_t _length)
 				{
 					if (!_error_code) {
-						if (msgQueueOut.front().body.data.size() > 0) {
+						if (msgQueueOut.front().BSize() > 0) {
 							WriteBody();
 						}
 						else {
@@ -149,7 +149,7 @@ namespace Net {
 			);
 		}
 		void WriteBody() {
-			asio::async_write(connectSocket, boost::asio::buffer(msgQueueOut.front().body.data.data(), msgQueueOut.front().body.data.size()),
+			asio::async_write(connectSocket, boost::asio::buffer(msgQueueOut.front().Body().Data(), msgQueueOut.front().BSize()),
 				[this](boost::system::error_code _error_code, std::size_t length)
 				{
 					if (!_error_code) {
@@ -168,15 +168,14 @@ namespace Net {
 
 		void AddMessageToQueue() {
 			if (owner == OwnerConnection::Server) {
-				msgQueueIn.push_back(std::make_shared<Net::OwnerMessage<TypeMsg, TypeMsgStatus>>(this->shared_from_this(), temporaryMessage));
+				msgQueueIn.push_back(std::make_shared<Net::OwnerMessage<MessageIMPL>>(this->shared_from_this(), temporaryMessage));
 			}
 			else {
-				msgQueueIn.push_back(std::make_shared<Net::OwnerMessage<TypeMsg, TypeMsgStatus>>(nullptr, temporaryMessage));
+				msgQueueIn.push_back(std::make_shared<Net::OwnerMessage<MessageIMPL>>(nullptr, temporaryMessage));
 			}
 			temporaryMessage.Clear();
 
 			ReadHeader();
 		}
 	};
-
 }

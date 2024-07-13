@@ -4,15 +4,15 @@
 
 namespace Net {
 
-	template<typename TypeMsg, typename TypeMsgStatus>
+	template<typename MessageIMPL>
 	class ClientInterface {
 	protected:
-		std::unique_ptr<Net::Connection<TypeMsg, TypeMsgStatus>> connection;
+		std::unique_ptr<Net::Connection<MessageIMPL>> connection;
 		asio::io_service connectContext;
 
 		std::thread threadContext;
 	private:
-		Utils::QueueLF<std::shared_ptr<Net::OwnerMessage<TypeMsg, TypeMsgStatus>>> msgQueueIn;
+		Utils::QueueLF<std::shared_ptr<Net::OwnerMessage<MessageIMPL>>> msgQueueIn;
 
 	public:
 		ClientInterface() = default;
@@ -22,7 +22,7 @@ namespace Net {
 			asio::ip::tcp::resolver resolver(connectContext);
 			asio::ip::tcp::resolver::results_type endpoint = resolver.resolve(_host, std::to_string(_port));
 
-			connection = std::make_unique<Net::Connection<TypeMsg, TypeMsgStatus>>(Net::Connection<TypeMsg, TypeMsgStatus>::OwnerConnection::Client, connectContext, SOCKET(connectContext), msgQueueIn);
+			connection = std::make_unique<Net::Connection<MessageIMPL>>(Net::Connection<MessageIMPL>::OwnerConnection::Client, connectContext, SOCKET(connectContext), msgQueueIn);
 
 			connection->ConnectToServer(endpoint);
 
@@ -51,7 +51,7 @@ namespace Net {
 			}
 		}
 
-		void Send(const Net::Message<TypeMsg, TypeMsgStatus>& _msg) {
+		void Send(const MessageIMPL& _msg) {
 			if (IsConnected()) {
 				connection->Send(_msg);
 			}
@@ -67,7 +67,7 @@ namespace Net {
 			return connection->GetPortLocal();
 		}
 
-		Utils::QueueLF<std::shared_ptr<OwnerMessage<TypeMsg, TypeMsgStatus>>>& Incoming() {
+		Utils::QueueLF<std::shared_ptr<OwnerMessage<MessageIMPL>>>& Incoming() {
 			return msgQueueIn;
 		}
 	};
