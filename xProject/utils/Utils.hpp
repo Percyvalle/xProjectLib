@@ -5,6 +5,8 @@
 #define JsonMSG(key, text) JSON::parse("{\"" + std::string(key) + "\":\"" + std::string(text) + "\"}")
 #define JsonMSGDump(key, text) JSON::parse("{\"" + std::string(key) + "\":\"" + std::string(text) + "\"}").dump()
 
+#define AssertMSG(expr, text, format)  if(expr){ spdlog::error(text, format); }
+
 namespace Utils 
 {
 	inline DWORD GetCountCPU()

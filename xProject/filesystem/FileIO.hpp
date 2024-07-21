@@ -17,6 +17,8 @@ namespace FileS
         FileIO() = default;
         explicit FileIO(const FileS::PathStruct& _filePath, std::ios_base::openmode _mode)
             : filePath(_filePath), fileStream(_filePath.GetPath(), _mode) {}
+        explicit FileIO(const std::string& _filePath, std::ios_base::openmode _mode)
+            : filePath(_filePath), fileStream(_filePath, _mode) {}
 
         ~FileIO() { Close(); }
 

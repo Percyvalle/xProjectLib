@@ -74,5 +74,8 @@
     <ClInclude Include="network\MessageInterface.hpp">
       <Filter>Файлы заголовков\network</Filter>
     </ClInclude>
+    <ClInclude Include="utils\Timer.hpp">
+      <Filter>Файлы заголовков\utils</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

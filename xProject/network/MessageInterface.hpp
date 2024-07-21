@@ -5,16 +5,18 @@
 
 namespace Net {
 
+	using byte_type = boost::asio::detail::buffered_stream_storage::byte_type;
+
 	template<typename TypeMsg, typename StatusMsg>
 	struct IHeader {
 	protected:
 		TypeMsg type;
 		StatusMsg status;
 
-		uint32_t sizeData = 0;
+		std::size_t sizeData = 0;
 	public:
-		const uint32_t Size() const { return sizeData; }
-		void SetSize(uint32_t _size) { sizeData = _size; }
+		const std::size_t Size() const { return sizeData; }
+		void SetSize(std::size_t _size) { sizeData = _size; }
 
 		TypeMsg Type() const { return type; }
 		StatusMsg Status() const { return status; }
@@ -25,10 +27,10 @@ namespace Net {
 
 	struct IBody {
 	protected:
-		std::vector<std::uint8_t> data;
+		std::vector<byte_type> data;
 
 	public:
-		const uint32_t Size() const { return data.size(); }
+		const std::size_t Size() const { return data.size(); }
 		const bool Empty() const { return data.empty(); }
 		std::vector<std::uint8_t>& Data() { return data; }
 		void Clear() { data.clear(); }
@@ -46,8 +48,8 @@ namespace Net {
 		TypeHeader& Header() { return header; }
 		TypeBody& Body() { return body; }
 
-		const uint32_t HSize() const { return header.Size(); }
-		const uint32_t BSize() const { return body.Size(); }
+		const size_t HSize() const { return header.Size(); }
+		const size_t BSize() const { return body.Size(); }
 	};
 
 	template<typename MessageIMPL>

@@ -11,8 +11,7 @@
 
 namespace Pool {
 
-	class ThreadTaskBase 
-	{
+	class ThreadTaskBase {
 	public:
 		virtual ~ThreadTaskBase() {}
 		virtual void Execute() = 0;
@@ -21,8 +20,7 @@ namespace Pool {
 	/// ThreadTask
 	/// ------------------------------------------------------------
 	template<typename Result>
-	class ThreadTask : public ThreadTaskBase 
-	{
+	class ThreadTask : public ThreadTaskBase {
 	private:
 		std::packaged_task<Result()> task;
 	public:
@@ -37,8 +35,7 @@ namespace Pool {
 			)
 		{}
 		
-		std::future<Result> GetFuture()
-		{
+		std::future<Result> GetFuture() {
 			return task.get_future();
 		}
 
@@ -51,8 +48,7 @@ namespace Pool {
 	};
 
 	template<typename Func, typename... Args>
-	auto MakeTask(Func&& _func, Args&&... _args)
-	{
+	auto MakeTask(Func&& _func, Args&&... _args) {
 		using Result = std::invoke_result_t<Func, Args...>;
 		return std::make_unique<ThreadTask<Result>>(std::forward<Func>(_func), 
 												    std::forward<Args>(_args)...);
@@ -60,8 +56,7 @@ namespace Pool {
 
 	/// ThreadPool
 	/// ------------------------------------------------------------
-	class ThreadPool 
-	{
+	class ThreadPool {
 	private:
 		using TaskPtrBase = std::unique_ptr<ThreadTaskBase>;
 
@@ -70,24 +65,19 @@ namespace Pool {
 		Utils::QueueLF<TaskPtrBase> tasks;
 
 	public:
-		explicit ThreadPool(std::uint8_t _numThread)
-		{
+		explicit ThreadPool(DWORD _numThread) {
 			threads.reserve(_numThread);
-			for (std::uint8_t i = 0; i < _numThread; i++)
-			{
+			for (DWORD i = 0; i < _numThread; i++) {
 				threads.emplace_back(&ThreadPool::WaitForWork, this);
 			}
 		}
 
-		~ThreadPool()
-		{
-			tasks.stop_wait();
-			Destroy();
+		~ThreadPool() {
+			Join();
 		}
 
 		template<typename Func, typename... Args>
-		auto Submit(Func&& _func, Args&&... _args)
-		{
+		auto Submit(Func&& _func, Args&&... _args) {
 			auto task = Pool::MakeTask(std::forward<Func>(_func), std::forward<Args>(_args)...);
 			auto taskFuture = task->GetFuture();
 			
@@ -96,29 +86,29 @@ namespace Pool {
 			return taskFuture;
 		}
 
+		void Join() {
+			tasks.stop_wait();
+			Destroy();
+		}
+
 	private:
-		void WaitForWork()
-		{
-			while (!stopThreads.load(std::memory_order_acquire))
-			{
+		void WaitForWork() {
+			while (!stopThreads.load(std::memory_order_acquire)) {
 				tasks.wait();
 
 				TaskPtrBase task = std::move(tasks.pop_front());
-				if (task.get() != nullptr)
-				{
+				if (task.get() != nullptr) {
 					task->Execute();
 				}
 
 			}
 		}
 
-		void Destroy()
-		{
+		void Destroy() {
 			stopThreads.store(true, std::memory_order_release);
-			for (auto& thread : threads)
-			{
-				if (thread.joinable())
-				{
+
+			for (auto& thread : threads) {
+				if (thread.joinable()) {
 					thread.join();
 				}
 			}

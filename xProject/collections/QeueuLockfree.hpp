@@ -162,9 +162,14 @@ namespace Utils
 			m_cvQueue.notify_all();
 		}
 
-		inline void wait() {
+		inline void wait(std::uint64_t _mlsec = 0) {
 			std::unique_lock<std::mutex> lock(m_blockingQueue);
-			m_cvQueue.wait(lock, [this]() { return !empty() || stopWait.load(std::memory_order_acquire); });
+			if (_mlsec == 0) {
+				m_cvQueue.wait(lock, [this]() { return !empty() || stopWait.load(std::memory_order_acquire); });
+			}
+			else {
+				m_cvQueue.wait_for(lock, std::chrono::milliseconds(_mlsec), [this]() { return !empty() || stopWait.load(std::memory_order_acquire); });
+			}
 		}
 	};
 }

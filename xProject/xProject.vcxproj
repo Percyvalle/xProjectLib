@@ -34,6 +34,7 @@
     <ClInclude Include="network\ServerInterface.hpp" />
     <ClInclude Include="utils\CommandParser.hpp" />
     <ClInclude Include="utils\ThreadPool.hpp" />
+    <ClInclude Include="utils\Timer.hpp" />
     <ClInclude Include="utils\Utils.hpp" />
     <ClInclude Include="xProject_pch.hpp" />
   </ItemGroup>
